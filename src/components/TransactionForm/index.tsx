@@ -46,8 +46,8 @@ export function TransactionForm({ onSubmitted }: TransactionFormProps) {
   // across type changes so users can experiment with sending them on any type.
   // Cases:
   //   undefined  → clear gasPrice + EIP-1559 fields
-  //   0/1/127    → clear EIP-1559 fields, keep gasPrice
-  //   2          → clear gasPrice, keep EIP-1559 fields
+  //   0/1        → clear EIP-1559 fields, keep gasPrice
+  //   2/127      → clear gasPrice, keep EIP-1559 fields (127 uses 1559-style fees)
   useEffect(() => {
     const clear = (k: 'gasPrice' | 'maxFeePerGas' | 'maxPriorityFeePerGas') =>
       setValue(k, '', { shouldDirty: false, shouldValidate: false });
@@ -55,7 +55,7 @@ export function TransactionForm({ onSubmitted }: TransactionFormProps) {
       clear('gasPrice');
       clear('maxFeePerGas');
       clear('maxPriorityFeePerGas');
-    } else if (type === 2) {
+    } else if (type === 2 || type === 127) {
       clear('gasPrice');
     } else {
       clear('maxFeePerGas');

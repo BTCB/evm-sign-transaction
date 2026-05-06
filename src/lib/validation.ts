@@ -104,7 +104,10 @@ const typedBranches = z.discriminatedUnion('type', [
   z.object({
     type: z.literal(127),
     ...baseFields,
-    gasPrice: optionalQuantityString,
+    // Morph altfee uses 1559-style fee fields (maxFeePerGas + tip) on top of
+    // the altfee token plumbing — NOT legacy gasPrice.
+    maxFeePerGas: optionalQuantityString,
+    maxPriorityFeePerGas: optionalQuantityString,
     // Override: feeTokenID is REQUIRED for the Morph altfee tx type
     // (baseFields exposes it as optional for all other types).
     feeTokenID: requiredBigintString,

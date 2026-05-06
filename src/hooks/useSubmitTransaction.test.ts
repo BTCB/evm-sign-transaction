@@ -261,7 +261,7 @@ describe('toRequest', () => {
     expect(r.value).toBe('0.001');
   });
 
-  it('forwards type 127 (Morph altfee) as 0x7f with feeTokenID + feeLimit strings', () => {
+  it('forwards type 127 (Morph altfee) as 0x7f with 1559-style fees + feeTokenID + feeLimit', () => {
     const v = parse({
       type: 127,
       to: TO,
@@ -269,16 +269,18 @@ describe('toRequest', () => {
       data: '',
       gas: '',
       nonce: '',
-      gasPrice: '1',
+      maxFeePerGas: '20',
+      maxPriorityFeePerGas: '1.5',
       feeTokenID: '3',
       feeLimit: '1000000',
     });
     const r = toRequest(v);
     expect(r.type).toBe('0x7f');
-    expect(r.gasPrice).toBe('1');
+    expect(r.maxFeePerGas).toBe('20');
+    expect(r.maxPriorityFeePerGas).toBe('1.5');
     expect(r.feeTokenID).toBe('3');
     expect(r.feeLimit).toBe('1000000');
-    expect(r.maxFeePerGas).toBeUndefined();
+    expect(r.gasPrice).toBeUndefined();
   });
 
   it('type 127 accepts feeTokenID=0; omits feeLimit when blank', () => {

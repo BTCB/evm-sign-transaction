@@ -51,7 +51,8 @@ export function toRequest(values: TxFormValues): RawTxPayload {
   if (values.type === undefined) return out;
   out.type = TYPE_HEX[values.type];
 
-  if (values.type === 2) {
+  // type 2 (EIP-1559) and type 127 (Morph altfee) both use 1559-style fee fields.
+  if (values.type === 2 || values.type === 127) {
     setIfPresent('maxFeePerGas', values.maxFeePerGas);
     setIfPresent('maxPriorityFeePerGas', values.maxPriorityFeePerGas);
   } else {

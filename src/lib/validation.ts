@@ -84,30 +84,34 @@ export { optionalString };
 // so the `undefined` branch can't sit inside it. We keep the literal branches
 // in a discriminatedUnion (perf-friendlier error messages) and union with the
 // `undefined`-typed branch via `z.union`.
+// Fee fields (gasPrice, maxFeePerGas, maxPriorityFeePerGas) are raw-wei
+// passthrough — integer or 0x hex only. Block explorers show these in raw
+// wei, so "input matches display." Decimal fractions (e.g. "0.001") aren't
+// meaningful for wei and are rejected at the schema boundary.
 const typedBranches = z.discriminatedUnion('type', [
   z.object({
     type: z.literal(0),
     ...baseFields,
-    gasPrice: optionalQuantityString,
+    gasPrice: optionalBigintString,
   }),
   z.object({
     type: z.literal(1),
     ...baseFields,
-    gasPrice: optionalQuantityString,
+    gasPrice: optionalBigintString,
   }),
   z.object({
     type: z.literal(2),
     ...baseFields,
-    maxFeePerGas: optionalQuantityString,
-    maxPriorityFeePerGas: optionalQuantityString,
+    maxFeePerGas: optionalBigintString,
+    maxPriorityFeePerGas: optionalBigintString,
   }),
   z.object({
     type: z.literal(127),
     ...baseFields,
     // Morph altfee uses 1559-style fee fields (maxFeePerGas + tip) on top of
     // the altfee token plumbing — NOT legacy gasPrice.
-    maxFeePerGas: optionalQuantityString,
-    maxPriorityFeePerGas: optionalQuantityString,
+    maxFeePerGas: optionalBigintString,
+    maxPriorityFeePerGas: optionalBigintString,
     // Override: feeTokenID is REQUIRED for the Morph altfee tx type
     // (baseFields exposes it as optional for all other types).
     feeTokenID: requiredBigintString,

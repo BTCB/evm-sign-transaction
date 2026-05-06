@@ -117,20 +117,36 @@ describe('toRequest', () => {
     expect(toRequest(v).value).toBe('0xde0b6b3a7640000');
   });
 
-  it('gasPrice passthrough: decimal stays decimal (NOT multiplied by 10^18)', () => {
-    const v = parse({
-      type: 0,
-      to: TO,
-      value: '0',
-      data: '',
-      gas: '',
-      nonce: '',
-      gasPrice: '1.5',
-    });
-    expect(toRequest(v).gasPrice).toBe('1.5');
+  it('gasPrice rejects decimal fractions (raw wei has no decimals)', () => {
+    expect(() =>
+      parse({
+        type: 0,
+        to: TO,
+        value: '0',
+        data: '',
+        gas: '',
+        nonce: '',
+        gasPrice: '1.5',
+      })
+    ).toThrow();
   });
 
-  it('maxFeePerGas / maxPriorityFeePerGas passthrough: decimal stays decimal', () => {
+  it('maxFeePerGas / maxPriorityFeePerGas reject decimal fractions', () => {
+    expect(() =>
+      parse({
+        type: 2,
+        to: TO,
+        value: '0',
+        data: '',
+        gas: '',
+        nonce: '',
+        maxFeePerGas: '20.5',
+        maxPriorityFeePerGas: '0.001',
+      })
+    ).toThrow();
+  });
+
+  it('fee fields accept raw-wei integers and 0x hex', () => {
     const v = parse({
       type: 2,
       to: TO,
@@ -138,12 +154,12 @@ describe('toRequest', () => {
       data: '',
       gas: '',
       nonce: '',
-      maxFeePerGas: '20.5',
-      maxPriorityFeePerGas: '0.001',
+      maxFeePerGas: '9088635',
+      maxPriorityFeePerGas: '0x4a817c800',
     });
     const r = toRequest(v);
-    expect(r.maxFeePerGas).toBe('20.5');
-    expect(r.maxPriorityFeePerGas).toBe('0.001');
+    expect(r.maxFeePerGas).toBe('9088635');
+    expect(r.maxPriorityFeePerGas).toBe('0x4a817c800');
   });
 
   it('gas / nonce remain integer-or-hex (no decimal)', () => {
@@ -269,15 +285,15 @@ describe('toRequest', () => {
       data: '',
       gas: '',
       nonce: '',
-      maxFeePerGas: '20',
-      maxPriorityFeePerGas: '1.5',
+      maxFeePerGas: '9088635',
+      maxPriorityFeePerGas: '8088635',
       feeTokenID: '3',
       feeLimit: '1000000',
     });
     const r = toRequest(v);
     expect(r.type).toBe('0x7f');
-    expect(r.maxFeePerGas).toBe('20');
-    expect(r.maxPriorityFeePerGas).toBe('1.5');
+    expect(r.maxFeePerGas).toBe('9088635');
+    expect(r.maxPriorityFeePerGas).toBe('8088635');
     expect(r.feeTokenID).toBe('3');
     expect(r.feeLimit).toBe('1000000');
     expect(r.gasPrice).toBeUndefined();

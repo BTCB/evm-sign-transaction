@@ -1,16 +1,19 @@
 import { useCallback, useState } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
-import { parseEther, parseGwei, toHex } from 'viem';
+import { parseEther, toHex } from 'viem';
 import { toRequest, type RawTxPayload } from '@/hooks/toRequest';
 import { mapTxError } from '@/lib/errors';
 import { toast } from '@/hooks/use-toast';
 import { useTxHistory } from '@/hooks/useTxHistory';
 import type { TxFormValues } from '@/lib/validation';
 
-// Count/ID fields (gas, nonce, feeTokenID, feeLimit) — decimal fractions are
-// nonsensical (you can't have 0.5 of a gas unit). Decimals must be integers.
+// Raw passthrough for integer / hex fields: gas, nonce, gasPrice, maxFeePerGas,
+// maxPriorityFeePerGas, feeTokenID, feeLimit. Block explorers show these in
+// raw wei (or raw count for gas/nonce/feeTokenID), so "input matches display."
+// Decimal fractions aren't meaningful and are rejected upstream by zod, but
+// we keep the runtime guard as a final safety net.
 //   - "0xff"   → "0xff" (verbatim hex)
-//   - "100"    → "0x64" (raw integer; never parseEther-scaled)
+//   - "100"    → "0x64" (raw integer; never scaled)
 //   - "0.001"  → throws
 function toRpcQuantity(s: string | undefined, field: string): `0x${string}` | undefined {
   if (s === undefined || s === '') return undefined;
@@ -34,18 +37,6 @@ function toRpcEthAmount(s: string | undefined): `0x${string}` | undefined {
   return toHex(parseEther(s));
 }
 
-// Gwei-denominated fee quantity (gasPrice, maxFeePerGas, maxPriorityFeePerGas).
-// Block explorers display these in gwei, so decimals are interpreted as gwei
-// and scaled by parseGwei. Hex is raw wei passthrough.
-//   - "0xba43b7400" → passthrough (raw wei)
-//   - "20"          → 0x4a817c800 (= 20 × 10^9 wei = 20 gwei)
-//   - "1.5"         → 0x59682f00 (= 1.5 × 10^9 wei = 1.5 gwei)
-function toRpcGweiAmount(s: string | undefined): `0x${string}` | undefined {
-  if (s === undefined || s === '') return undefined;
-  if (s.startsWith('0x')) return s as `0x${string}`;
-  return toHex(parseGwei(s));
-}
-
 // Encode every quantity field at the wire boundary. `to`, `data`, `type`,
 // `feeTokenID`, and `feeLimit` are forwarded as-is from RawTxPayload (custom
 // fields go to the wallet untouched; the wallet decides what to do with them).
@@ -58,11 +49,11 @@ function encodeForRpc(raw: RawTxPayload): Record<string, unknown> {
   if (gas) out.gas = gas;
   const nonce = toRpcQuantity(raw.nonce, 'nonce');
   if (nonce) out.nonce = nonce;
-  const gasPrice = toRpcGweiAmount(raw.gasPrice);
+  const gasPrice = toRpcQuantity(raw.gasPrice, 'gasPrice');
   if (gasPrice) out.gasPrice = gasPrice;
-  const maxFee = toRpcGweiAmount(raw.maxFeePerGas);
+  const maxFee = toRpcQuantity(raw.maxFeePerGas, 'maxFeePerGas');
   if (maxFee) out.maxFeePerGas = maxFee;
-  const maxPrio = toRpcGweiAmount(raw.maxPriorityFeePerGas);
+  const maxPrio = toRpcQuantity(raw.maxPriorityFeePerGas, 'maxPriorityFeePerGas');
   if (maxPrio) out.maxPriorityFeePerGas = maxPrio;
   // Morph altfee custom fields — encode the same way for consistency.
   const ftid = toRpcQuantity(raw.feeTokenID, 'feeTokenID');
